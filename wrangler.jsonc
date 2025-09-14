@@ -17,10 +17,6 @@
     {
       "binding": "FLIGHTWALL_API_KEYS",
       "id": "b526446b9087443ba5901327bf286589"
-    },
-    {
-      "binding": "FLIGHTWALL_API_KEYS",
-      "preview_id": "a4faf18ab0f14abe8aaabe35048e68f9"
     }
   ],
   "unsafe": {
