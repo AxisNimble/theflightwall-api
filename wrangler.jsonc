@@ -12,5 +12,28 @@
       "database_name": "theflightwall-db",
       "database_id": "99e422f9-c159-4537-912d-c57834b66e38"
     }
-  ]
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "FLIGHTWALL_API_KEYS",
+      "id": "b526446b9087443ba5901327bf286589"
+    },
+    {
+      "binding": "FLIGHTWALL_API_KEYS",
+      "preview_id": "a4faf18ab0f14abe8aaabe35048e68f9"
+    }
+  ],
+  "unsafe": {
+    "bindings": [
+      {
+        "name": "FLIGHTWALL_RATE_LIMITER",
+        "type": "ratelimit",
+        "namespace_id": "2001",
+        "simple": {
+          "limit": 1,
+          "period": 10
+        }
+      }
+    ]
+  }
 }
