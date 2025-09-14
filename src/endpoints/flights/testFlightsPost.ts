@@ -21,9 +21,6 @@ export class TestFlightsPost extends OpenAPIRoute {
   };
 
   public async handle(c: AppContext) {
-    return {
-      success: true as const,
-      result: { flights: exampleFlights },
-    };
+    return { flights: exampleFlights };
   }
 }
