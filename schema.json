@@ -1,0 +1,456 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "TheFlightWall API",
+    "version": "0.1.0",
+    "description": "Core endpoints for TheFlightWall."
+  },
+  "components": {
+    "schemas": {},
+    "parameters": {}
+  },
+  "paths": {
+    "/flights": {
+      "post": {
+        "tags": [
+          "Flights"
+        ],
+        "summary": "Query live flights (unimplemented)",
+        "operationId": "flights-post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "radius_request": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "radius"
+                        ]
+                      },
+                      "latitude": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "longitude": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180
+                      },
+                      "radius_km": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      },
+                      "min_altitude": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "max_altitude": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "latitude",
+                      "longitude",
+                      "radius_km"
+                    ]
+                  },
+                  "geo_request": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "geo"
+                        ]
+                      },
+                      "coordinates": {
+                        "type": "array",
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "number"
+                          }
+                        }
+                      },
+                      "min_altitude": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "max_altitude": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "coordinates"
+                    ]
+                  },
+                  "data_filters": {
+                    "type": "object",
+                    "properties": {
+                      "only_aircraft": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "only_airlines": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "display_config": {
+                    "type": "object",
+                    "properties": {
+                      "model": {
+                        "type": "string",
+                        "default": "mini-v1"
+                      },
+                      "info_layout_preset": {
+                        "type": "string",
+                        "enum": [
+                          "default",
+                          "technical"
+                        ],
+                        "default": "default"
+                      },
+                      "display_layout_preset": {
+                        "type": "string",
+                        "enum": [
+                          "default",
+                          "no_logo"
+                        ],
+                        "default": "default"
+                      },
+                      "anchor_airports": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Example shape for future success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "result": {
+                      "type": "object",
+                      "properties": {
+                        "flights": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "icao24": {
+                                "type": "string"
+                              },
+                              "callsign": {
+                                "type": "string"
+                              },
+                              "registration": {
+                                "type": "string"
+                              },
+                              "position_lat": {
+                                "type": "number"
+                              },
+                              "position_lon": {
+                                "type": "number"
+                              },
+                              "position_altitude_baro": {
+                                "type": "number"
+                              },
+                              "position_altitude_geo": {
+                                "type": "number"
+                              },
+                              "position_velocity": {
+                                "type": "number"
+                              },
+                              "position_true_track": {
+                                "type": "number"
+                              },
+                              "position_vertical_rate": {
+                                "type": "number"
+                              },
+                              "position_on_ground": {
+                                "type": "boolean"
+                              },
+                              "position_squawk": {
+                                "type": "string"
+                              },
+                              "route_origin_icao": {
+                                "type": "string"
+                              },
+                              "route_origin_iata": {
+                                "type": "string"
+                              },
+                              "route_dest_icao": {
+                                "type": "string"
+                              },
+                              "route_dest_iata": {
+                                "type": "string"
+                              },
+                              "route_origin_readable": {
+                                "type": "string"
+                              },
+                              "route_destination_readable": {
+                                "type": "string"
+                              },
+                              "airline_code": {
+                                "type": "string"
+                              },
+                              "airline_painted_as": {
+                                "type": "string"
+                              },
+                              "airline_operating_as": {
+                                "type": "string"
+                              },
+                              "airline_name_readable": {
+                                "type": "string"
+                              },
+                              "airline_logo_url": {
+                                "type": "string",
+                                "format": "uri"
+                              },
+                              "aircraft_type": {
+                                "type": "string"
+                              },
+                              "meta_origin_country": {
+                                "type": "string"
+                              },
+                              "meta_last_contact": {
+                                "type": "integer"
+                              },
+                              "meta_timestamp": {
+                                "type": "string"
+                              },
+                              "meta_source": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "default": []
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "result"
+                  ]
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not Implemented",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "integer"
+                          },
+                          "message": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "message"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "errors"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test/flights": {
+      "post": {
+        "tags": [
+          "Flights"
+        ],
+        "summary": "Return test flight data",
+        "operationId": "test-flights-post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Two example flights",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "result": {
+                      "type": "object",
+                      "properties": {
+                        "flights": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "icao24": {
+                                "type": "string"
+                              },
+                              "callsign": {
+                                "type": "string"
+                              },
+                              "registration": {
+                                "type": "string"
+                              },
+                              "position_lat": {
+                                "type": "number"
+                              },
+                              "position_lon": {
+                                "type": "number"
+                              },
+                              "position_altitude_baro": {
+                                "type": "number"
+                              },
+                              "position_altitude_geo": {
+                                "type": "number"
+                              },
+                              "position_velocity": {
+                                "type": "number"
+                              },
+                              "position_true_track": {
+                                "type": "number"
+                              },
+                              "position_vertical_rate": {
+                                "type": "number"
+                              },
+                              "position_on_ground": {
+                                "type": "boolean"
+                              },
+                              "position_squawk": {
+                                "type": "string"
+                              },
+                              "route_origin_icao": {
+                                "type": "string"
+                              },
+                              "route_origin_iata": {
+                                "type": "string"
+                              },
+                              "route_dest_icao": {
+                                "type": "string"
+                              },
+                              "route_dest_iata": {
+                                "type": "string"
+                              },
+                              "route_origin_readable": {
+                                "type": "string"
+                              },
+                              "route_destination_readable": {
+                                "type": "string"
+                              },
+                              "airline_code": {
+                                "type": "string"
+                              },
+                              "airline_painted_as": {
+                                "type": "string"
+                              },
+                              "airline_operating_as": {
+                                "type": "string"
+                              },
+                              "airline_name_readable": {
+                                "type": "string"
+                              },
+                              "airline_logo_url": {
+                                "type": "string",
+                                "format": "uri"
+                              },
+                              "aircraft_type": {
+                                "type": "string"
+                              },
+                              "meta_origin_country": {
+                                "type": "string"
+                              },
+                              "meta_last_contact": {
+                                "type": "integer"
+                              },
+                              "meta_timestamp": {
+                                "type": "string"
+                              },
+                              "meta_source": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "default": []
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "result"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}
