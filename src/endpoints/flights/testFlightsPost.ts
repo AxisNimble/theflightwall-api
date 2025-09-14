@@ -39,33 +39,6 @@ export class TestFlightsPost extends OpenAPIRoute {
   };
 
   public async handle(c: AppContext) {
-    const apiKey = c.req.header("x-api-key") || "";
-    if (!apiKey) {
-      c.status(401);
-      return {
-        success: false,
-        errors: [{ code: 1101, message: "Missing API key" }],
-      } as const;
-    }
-
-    const keyOwner = await c.env.FLIGHTWALL_API_KEYS.get(apiKey);
-    if (!keyOwner) {
-      c.status(401);
-      return {
-        success: false,
-        errors: [{ code: 1102, message: "Invalid API key" }],
-      } as const;
-    }
-
-    const { success } = await c.env.FLIGHTWALL_RATE_LIMITER.limit({ key: apiKey });
-    if (!success) {
-      c.status(429);
-      return {
-        success: false,
-        errors: [{ code: 1201, message: "Rate limit exceeded" }],
-      } as const;
-    }
-
     return { flights: exampleFlights };
   }
 }

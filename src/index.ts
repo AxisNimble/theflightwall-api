@@ -1,5 +1,6 @@
 import { ApiException, fromHono } from "chanfana";
 import { Hono } from "hono";
+import { validateApiKeyAndRateLimit } from "./middleware/auth";
 import { ContentfulStatusCode } from "hono/utils/http-status";
 import { FlightsPost } from "./endpoints/flights/flightsPost";
 import { TestFlightsPost } from "./endpoints/flights/testFlightsPost";
@@ -36,6 +37,9 @@ const openapi = fromHono(app, {
     },
   },
 });
+
+// Global middleware - applies to all routes registered below
+app.use("*", validateApiKeyAndRateLimit);
 
 // Register flights endpoints
 openapi.post("/flights", FlightsPost);
