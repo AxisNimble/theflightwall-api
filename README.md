@@ -70,3 +70,19 @@ Test files are located in the `tests/` directory, with examples demonstrating ho
 2. Each endpoint has its own file in `src/endpoints/`.
 3. Integration tests are located in the `tests/` directory.
 4. For more information read the [chanfana documentation](https://chanfana.com/), [Hono documentation](https://hono.dev/docs), and [Vitest documentation](https://vitest.dev/guide/).
+
+## Authentication and Rate Limiting
+
+All routes are protected by a global middleware defined in `src/middleware/auth.ts` and wired in `src/index.ts`.
+
+- Expects an API key in the `x-api-key` header
+- Verifies the API key exists in the `FLIGHTWALL_API_KEYS` KV (value ignored)
+- Applies rate limits using the `FLIGHTWALL_RATE_LIMITER` binding
+
+Failure responses use a consistent envelope:
+
+```json
+{ "success": false, "errors": [{ "code": 1101 | 1102 | 1201, "message": string }] }
+```
+
+This removes the need for per-endpoint auth/rate checks and ensures uniform behavior.
