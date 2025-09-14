@@ -1,0 +1,16 @@
+{
+  "compatibility_date": "2025-04-01",
+  "main": "src/index.ts",
+  "name": "theflightwall-api",
+  "upload_source_maps": true,
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "theflightwall-db",
+      "database_id": "99e422f9-c159-4537-912d-c57834b66e38"
+    }
+  ]
+}
