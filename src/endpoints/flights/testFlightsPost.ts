@@ -37,8 +37,13 @@ export class TestFlightsPost extends OpenAPIRoute {
       },
     },
   };
-
   public async handle(c: AppContext) {
-    return { flights: exampleFlights };
+    return {
+      success: true,
+      result: {
+        flights: exampleFlights,
+        timestamp: new Date().toISOString(),
+      },
+    };
   }
 }

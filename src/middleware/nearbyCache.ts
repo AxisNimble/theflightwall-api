@@ -1,7 +1,7 @@
 import { latLngToCell } from "h3-js";
 import type { Env } from "../bindings";
 import type { MiddlewareHandler } from "hono";
-import { normalizeNearby, getFromEdgeCache, putInEdgeCache, setSharedCacheHeaders, computeEtag, toJsonResponse } from "../cache/nearby";
+import { normalizeNearby, getFromEdgeCache, putInEdgeCache, setSharedCacheHeaders } from "../cache/nearby";
 import { StatusCode } from "hono/utils/http-status";
 
 // Simple adapter implementing only required H3Like functions
@@ -21,6 +21,7 @@ type NearbyBody = {
  * - After downstream handler, stamps cache headers, computes ETag, and stores in edge cache
  */
 export const nearbyCache: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
+  // Only apply to POST handlers mounted under this prefix, but we cache via synthetic GET keys
   if (c.req.method !== "POST") {
     return next();
   }
@@ -41,21 +42,16 @@ export const nearbyCache: MiddlewareHandler<{ Bindings: Env }> = async (c, next)
   // Normalize and build key
   const normalized = normalizeNearby(H3, { latitude: rr.latitude, longitude: rr.longitude, radiusKm: rr.radius_km }, 6);
   const cacheKey = normalized.cacheKey;
-  // Try cache
-  const ifNoneMatch = c.req.header("if-none-match") || "";
-  const cached = await getFromEdgeCache(cacheKey);
+  const resourcePath = new URL(c.req.url).pathname; // distinguishes /flights vs /test/flights
+
+  // Try cache via Workers Cache API (GET-only)
+  const cached = await getFromEdgeCache(cacheKey, resourcePath, "nearby-v1");
   if (cached) {
-    const etag = cached.headers.get("etag") || "";
-    if (ifNoneMatch && etag && ifNoneMatch === etag) {
-      console.log(`[CACHE] 304 Not Modified - Key: ${cacheKey}, ETag: ${etag}`);
-      return c.newResponse(null, 304, Object.fromEntries(new Headers([...Array.from(cached.headers.entries()), ["etag", etag]]).entries()));
-    }
-    console.log(`[CACHE] HIT - Key: ${cacheKey}, ETag: ${etag}`);
-    const cachedText = await cached.text();
-    return c.newResponse(cachedText, cached.status as StatusCode, Object.fromEntries(cached.headers.entries()));
+    console.log(`[CACHE] HIT - Key: ${cacheKey} Path: ${resourcePath}`);
+    return c.newResponse(await cached.text(), cached.status as StatusCode, Object.fromEntries(cached.headers.entries()));
   }
 
-  console.log(`[CACHE] MISS - Key: ${cacheKey}`);
+  console.log(`[CACHE] MISS - Key: ${cacheKey} Path: ${resourcePath}`);
 
   await next();
 
@@ -63,28 +59,12 @@ export const nearbyCache: MiddlewareHandler<{ Bindings: Env }> = async (c, next)
   if (!c.res || c.res.status !== 200) return;
 
   try {
-    // Read outgoing body to compute ETag
-    const cloned = c.res.clone();
-    // Attempt to parse JSON, fallback to text
-    let payload: unknown;
-    let text: string;
-    try {
-      text = await cloned.text();
-      payload = JSON.parse(text);
-    } catch (_) {
-      text = await cloned.text();
-      payload = text;
-    }
+    // Stamp headers for edge caching (10s, browser 0s)
+    setSharedCacheHeaders(c.res, "");
 
-    const tick = Math.floor(Date.now() / 10000) * 10000;
-    const etag = await computeEtag(tick, payload);
-
-    // Stamp headers on the live response
-    setSharedCacheHeaders(c.res, etag);
-
-    // Put a cached copy
-    console.log(`[CACHE] STORE - Key: ${cacheKey}, ETag: ${etag}, TTL: 12s`);
-    await putInEdgeCache(cacheKey, c.res, 12);
+    // Put a cached copy using synthetic GET key; do not await
+    console.log(`[CACHE] STORE - Key: ${cacheKey}, TTL: 10s Path: ${resourcePath}`);
+    c.executionCtx.waitUntil(putInEdgeCache(cacheKey, c.res, 10, resourcePath, "nearby-v1"));
   } catch (_) {
     // Best-effort; do not fail the request on caching issues
   }

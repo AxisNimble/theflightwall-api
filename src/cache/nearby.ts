@@ -41,8 +41,9 @@ export async function computeEtag(tickMillis: number, payload: unknown): Promise
 }
 
 export function setSharedCacheHeaders(resp: Response, etag: string) {
-  resp.headers.set("Cache-Control", "s-maxage=10, stale-while-revalidate=10, stale-if-error=60");
-  resp.headers.set("ETag", etag);
+  // Edge caches for 10s; browsers don't cache
+  resp.headers.set("Cache-Control", "public, s-maxage=10, max-age=0");
+  if (etag) resp.headers.set("ETag", etag);
   return resp;
 }
 
@@ -75,21 +76,30 @@ export function normalizeNearby(h3: H3Like, req: NearbyRequest, resolution = 6):
   return { ...req, resolution, cellIndex, radiusBucket, cacheKey };
 }
 
-export async function getFromEdgeCache(cacheKey: string): Promise<Response | null> {
-  // Cloudflare caches.default only keys by method+url, so we create a synthetic GET to the key
-  const url = new URL(`https://edge-cache/${cacheKey}`);
+/**
+ * Build a synthetic GET Request used for Workers Cache API lookups.
+ * Including the resourcePath ensures different endpoints do not collide.
+ */
+function buildEdgeCacheRequest(cacheKey: string, resourcePath?: string, partitionHint?: string): Request {
+  const path = resourcePath && resourcePath.startsWith("/") ? resourcePath : resourcePath ? `/${resourcePath}` : "";
+  const url = new URL(`https://edge-cache/${cacheKey}${path}`);
+  const headers = new Headers();
+  if (partitionHint) headers.set("CF-Cache-Partition", partitionHint);
+  return new Request(url.toString(), { method: "GET", headers });
+}
+
+export async function getFromEdgeCache(cacheKey: string, resourcePath?: string, partitionHint?: string): Promise<Response | null> {
   const cache = caches.default;
-  const req = new Request(url.toString(), { method: "GET" });
+  const req = buildEdgeCacheRequest(cacheKey, resourcePath, partitionHint);
   const hit = await cache.match(req);
   return hit ?? null;
 }
 
-export async function putInEdgeCache(cacheKey: string, response: Response, ttlSeconds = 12): Promise<void> {
-  const url = new URL(`https://edge-cache/${cacheKey}`);
+export async function putInEdgeCache(cacheKey: string, response: Response, ttlSeconds = 10, resourcePath?: string, partitionHint?: string): Promise<void> {
   const cache = caches.default;
-  const req = new Request(url.toString(), { method: "GET" });
-  // Respect TTL using Cloudflare Cache API semantics via s-maxage on the response
+  const req = buildEdgeCacheRequest(cacheKey, resourcePath, partitionHint);
+  // Stamp edge TTL via Cache-Control. Browsers get 0s; edge caches for ttlSeconds.
   const resp = new Response(response.body, response);
-  resp.headers.set("Cache-Control", `s-maxage=${ttlSeconds}, stale-while-revalidate=10, stale-if-error=60`);
+  resp.headers.set("Cache-Control", `public, s-maxage=${ttlSeconds}, max-age=0`);
   await cache.put(req, resp);
 }
