@@ -6,6 +6,12 @@
   "observability": {
     "enabled": true
   },
+  "routes": [
+    {
+      "pattern": "api.theflightwall.com/*",
+      "custom_domain": true
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
