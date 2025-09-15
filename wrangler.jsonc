@@ -8,7 +8,7 @@
   },
   "routes": [
     {
-      "pattern": "api.theflightwall.com/*",
+      "pattern": "api.theflightwall.com",
       "custom_domain": true
     }
   ],

@@ -1,105 +1,185 @@
-// Lightweight H3 interface to avoid tight coupling at call sites
-export type H3Like = {
-  latLngToCell: (lat: number, lon: number, res: number) => string;
-  gridDisk: (origin: string, k: number) => string[];
-};
+import { polygonToCells, cellToParent } from "h3-js";
+import type { Env } from "../bindings";
+import type { Flight, FlightRequest, FlightResponse } from "../schemas/flights";
 
-export type RadiusBucket = 5 | 10 | 25 | 50 | 100;
+const DATA_TILE_BASE = "https://apihelper.theflightwall.com/data/res5" as const;
 
-export const RADIUS_BUCKETS: RadiusBucket[] = [5, 10, 25, 50, 100];
+export function getTenSecondBucket(nowMs = Date.now()): number {
+  return Math.floor(nowMs / 10000);
+}
 
-export type NearbyCacheKey = {
-  resolution: number;
-  cellIndex: string;
-  radiusBucket: RadiusBucket;
-};
+export function buildTileCacheKey(hex: string, bucket: number, version = "v1"): string {
+  return `${version}:res5:${hex}:${bucket}`;
+}
 
-export function bucketRadiusKm(radiusKm: number): RadiusBucket {
-  const abs = Math.max(0, radiusKm);
-  let chosen: RadiusBucket = 5;
-  for (const b of RADIUS_BUCKETS) {
-    chosen = b;
-    if (abs <= b) break;
+export function buildTileUrl(hex: string): string {
+  return `${DATA_TILE_BASE}/${hex}`;
+}
+
+export async function fetchRes5Tile(hex: string, env: Env, bucket: number): Promise<FlightResponse> {
+  const clientId = env.FW_DATA_ENGINE_CLIENT_ID || "";
+  const clientSecret = env.FW_DATA_ENGINE_CLIENT_SECRET || "";
+
+  if (!clientId || !clientSecret) {
+    throw new Error("Missing data engine credentials");
   }
-  return chosen;
-}
 
-export function buildNearbyKey(resolution: number, cellIndex: string, radiusBucket: RadiusBucket): string {
-  return `near/h3/${resolution}/${cellIndex}/r${radiusBucket}`;
-}
+  const cacheKey = buildTileCacheKey(hex, bucket);
+  const url = buildTileUrl(hex);
 
-export function computeCellIndex(h3: H3Like, lat: number, lon: number, resolution: number): string {
-  return h3.latLngToCell(lat, lon, resolution);
-}
-
-export async function computeEtag(tickMillis: number, payload: unknown): Promise<string> {
-  const data = new TextEncoder().encode(JSON.stringify(payload));
-  const buf = await crypto.subtle.digest("SHA-1", data);
-  const bytes = Array.from(new Uint8Array(buf));
-  const hex = bytes.map((b) => b.toString(16).padStart(2, "0")).join("");
-  return `${tickMillis}-${hex.slice(0, 12)}`;
-}
-
-export function setSharedCacheHeaders(resp: Response, etag: string) {
-  // Edge caches for 10s; browsers don't cache
-  resp.headers.set("Cache-Control", "public, s-maxage=10, max-age=0");
-  if (etag) resp.headers.set("ETag", etag);
-  return resp;
-}
-
-export function toJsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
+  const res = await fetch(url, {
+    method: "GET",
     headers: {
-      "content-type": "application/json; charset=utf-8",
+      "CF-Access-Client-Id": clientId,
+      "CF-Access-Client-Secret": clientSecret,
+      Accept: "application/json",
     },
-  });
+    cf: {
+      cacheEverything: true,
+      cacheTtl: 10,
+      cacheKey,
+    },
+  } as RequestInit & { cf: RequestInitCfProperties });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Tile fetch error ${res.status} for ${hex}: ${text}`);
+  }
+
+  const json = (await res.json().catch(() => ({}))) as Partial<FlightResponse>;
+  return { flights: Array.isArray(json.flights) ? (json.flights as Flight[]) : [] };
 }
 
-export type NearbyRequest = {
-  latitude: number;
-  longitude: number;
-  radiusKm: number;
-};
-
-export type NearbyNormalized = NearbyRequest & {
-  resolution: number;
-  cellIndex: string;
-  radiusBucket: RadiusBucket;
-  cacheKey: string;
-};
-
-export function normalizeNearby(h3: H3Like, req: NearbyRequest, resolution = 6): NearbyNormalized {
-  const radiusBucket = bucketRadiusKm(req.radiusKm);
-  const cellIndex = computeCellIndex(h3, req.latitude, req.longitude, resolution);
-  const cacheKey = buildNearbyKey(resolution, cellIndex, radiusBucket);
-  return { ...req, resolution, cellIndex, radiusBucket, cacheKey };
+export function computeRes5CoverageForRequest(req: FlightRequest): string[] {
+  const res = 5;
+  if (req.radius_request) {
+    const { latitude, longitude, radius_km } = req.radius_request;
+    const [lat, lon] = sanitizeLatLon(latitude, longitude);
+    // Oversample the circle polygon at a higher resolution, then collapse to res5 parents
+    const ring = buildCircleRingLatLng(lat, lon, radius_km, 72);
+    const oversampleRes = 8;
+    const children = polygonToCells([ring], oversampleRes, false);
+    const parents = new Set<string>();
+    for (const child of children) parents.add(cellToParent(child, res));
+    return Array.from(parents).sort();
+  }
+  if (req.geo_request) {
+    const coordsLonLat = req.geo_request.coordinates || [];
+    const ring = coordsLonLat.map(([lon, lat]) => [lat, lon]);
+    if (ring.length && (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1])) {
+      ring.push([...ring[0]]);
+    }
+    return polygonToCells([ring], res, true);
+  }
+  return [];
 }
 
-/**
- * Build a synthetic GET Request used for Workers Cache API lookups.
- * Including the resourcePath ensures different endpoints do not collide.
- */
-function buildEdgeCacheRequest(cacheKey: string, resourcePath?: string, partitionHint?: string): Request {
-  const path = resourcePath && resourcePath.startsWith("/") ? resourcePath : resourcePath ? `/${resourcePath}` : "";
-  const url = new URL(`https://edge-cache/${cacheKey}${path}`);
-  const headers = new Headers();
-  if (partitionHint) headers.set("CF-Cache-Partition", partitionHint);
-  return new Request(url.toString(), { method: "GET", headers });
+export function buildCircleRingLatLng(lat: number, lon: number, radiusKm: number, points = 72): [number, number][] {
+  const ring: [number, number][] = [];
+  const earthRadiusKm = 6371.0088;
+  const angDist = radiusKm / earthRadiusKm;
+  const latRad = toRad(lat);
+  const lonRad = toRad(lon);
+  for (let i = 0; i < points; i++) {
+    const bearing = (2 * Math.PI * i) / points;
+    const sinLat = Math.sin(latRad) * Math.cos(angDist) + Math.cos(latRad) * Math.sin(angDist) * Math.cos(bearing);
+    const dLat = Math.asin(sinLat);
+    const y = Math.sin(bearing) * Math.sin(angDist) * Math.cos(latRad);
+    const x = Math.cos(angDist) - Math.sin(latRad) * Math.sin(dLat);
+    const dLon = Math.atan2(y, x);
+    const latDeg = toDeg(dLat);
+    const lonDeg = normalizeLon(toDeg(lonRad + dLon));
+    ring.push([latDeg, lonDeg]);
+  }
+  ring.push([...ring[0]]);
+  return ring;
 }
 
-export async function getFromEdgeCache(cacheKey: string, resourcePath?: string, partitionHint?: string): Promise<Response | null> {
-  const cache = caches.default;
-  const req = buildEdgeCacheRequest(cacheKey, resourcePath, partitionHint);
-  const hit = await cache.match(req);
-  return hit ?? null;
+export function sanitizeLatLon(lat: number, lon: number): [number, number] {
+  let outLat = lat;
+  let outLon = lon;
+  const inLatRange = outLat >= -90 && outLat <= 90;
+  const lonLooksLikeLat = outLon >= -90 && outLon <= 90;
+  const lonValid = outLon >= -180 && outLon <= 180;
+  if (!inLatRange && lonValid && lonLooksLikeLat) {
+    // Swap if provided in lon,lat order
+    const tmp = outLat;
+    outLat = outLon;
+    outLon = tmp;
+  }
+  if (!(outLat >= -90 && outLat <= 90)) throw new Error(`Latitude out of range after sanitization: ${outLat}`);
+  if (!(outLon >= -180 && outLon <= 180)) throw new Error(`Longitude out of range after sanitization: ${outLon}`);
+  return [outLat, outLon];
 }
 
-export async function putInEdgeCache(cacheKey: string, response: Response, ttlSeconds = 10, resourcePath?: string, partitionHint?: string): Promise<void> {
-  const cache = caches.default;
-  const req = buildEdgeCacheRequest(cacheKey, resourcePath, partitionHint);
-  // Stamp edge TTL via Cache-Control. Browsers get 0s; edge caches for ttlSeconds.
-  const resp = new Response(response.body, response);
-  resp.headers.set("Cache-Control", `public, s-maxage=${ttlSeconds}, max-age=0`);
-  await cache.put(req, resp);
+function toRad(deg: number): number {
+  return (deg * Math.PI) / 180;
+}
+
+function toDeg(rad: number): number {
+  return (rad * 180) / Math.PI;
+}
+
+function normalizeLon(lon: number): number {
+  let l = lon;
+  while (l < -180) l += 360;
+  while (l > 180) l -= 360;
+  return l;
+}
+
+export function filterFlightsToRequest(flights: Flight[], req: FlightRequest): Flight[] {
+  let out = flights;
+
+  // Data filters
+  if (req.data_filters?.only_aircraft?.length) {
+    const set = new Set(req.data_filters.only_aircraft);
+    out = out.filter((f) => (f.icao24 && set.has(f.icao24)) || (f.registration && set.has(f.registration || "")));
+  }
+  if (req.data_filters?.only_airlines?.length) {
+    const set = new Set(req.data_filters.only_airlines);
+    out = out.filter((f) => (f.airline_code && set.has(f.airline_code)) || (f.airline_operating_as && set.has(f.airline_operating_as)) || (f.airline_painted_as && set.has(f.airline_painted_as)));
+  }
+
+  // Shape filters
+  if (req.radius_request) {
+    const { latitude, longitude, radius_km } = req.radius_request;
+    out = out.filter((f) => isFiniteNumber(f.position_lat) && isFiniteNumber(f.position_lon) && haversineKm(latitude, longitude, f.position_lat!, f.position_lon!) <= radius_km);
+  } else if (req.geo_request) {
+    const ringLatLng = req.geo_request.coordinates.map(([lon, lat]) => [lat, lon]) as [number, number][];
+    if (ringLatLng.length && (ringLatLng[0][0] !== ringLatLng[ringLatLng.length - 1][0] || ringLatLng[0][1] !== ringLatLng[ringLatLng.length - 1][1])) {
+      ringLatLng.push([...ringLatLng[0]]);
+    }
+    out = out.filter((f) => isFiniteNumber(f.position_lat) && isFiniteNumber(f.position_lon) && pointInPolygon([f.position_lat!, f.position_lon!], ringLatLng));
+  }
+
+  return out;
+}
+
+function isFiniteNumber(v: unknown): v is number {
+  return typeof v === "number" && Number.isFinite(v);
+}
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function pointInPolygon(pointLatLng: [number, number], ringLatLng: [number, number][]): boolean {
+  // Ray-casting algorithm on lon-lat order requires conversion
+  const point = { x: pointLatLng[1], y: pointLatLng[0] };
+  const verts = ringLatLng.map(([lat, lon]) => ({ x: lon, y: lat }));
+  let inside = false;
+  for (let i = 0, j = verts.length - 1; i < verts.length; j = i++) {
+    const xi = verts[i].x,
+      yi = verts[i].y;
+    const xj = verts[j].x,
+      yj = verts[j].y;
+    const intersect = yi > point.y !== yj > point.y && point.x < ((xj - xi) * (point.y - yi)) / (yj - yi + 0.0000001) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
 }
