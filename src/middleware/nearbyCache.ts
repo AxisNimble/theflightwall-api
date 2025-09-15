@@ -3,6 +3,7 @@ import type { Env } from "../bindings";
 import type { MiddlewareHandler } from "hono";
 import { normalizeNearby, getFromEdgeCache, putInEdgeCache, setSharedCacheHeaders } from "../cache/nearby";
 import { StatusCode } from "hono/utils/http-status";
+import { getConfig } from "../config";
 
 // Simple adapter implementing only required H3Like functions
 const H3 = {
@@ -40,12 +41,13 @@ export const nearbyCache: MiddlewareHandler<{ Bindings: Env }> = async (c, next)
   }
 
   // Normalize and build key
-  const normalized = normalizeNearby(H3, { latitude: rr.latitude, longitude: rr.longitude, radiusKm: rr.radius_km }, 6);
+  const { cacheTtlSeconds, h3Resolution, cachePartitionHint } = getConfig(c.env);
+  const normalized = normalizeNearby(H3, { latitude: rr.latitude, longitude: rr.longitude, radiusKm: rr.radius_km }, h3Resolution);
   const cacheKey = normalized.cacheKey;
   const resourcePath = new URL(c.req.url).pathname; // distinguishes /flights vs /test/flights
 
   // Try cache via Workers Cache API (GET-only)
-  const cached = await getFromEdgeCache(cacheKey, resourcePath, "nearby-v1");
+  const cached = await getFromEdgeCache(cacheKey, resourcePath, cachePartitionHint);
   if (cached) {
     console.log(`[CACHE] HIT - Key: ${cacheKey} Path: ${resourcePath}`);
     return c.newResponse(await cached.text(), cached.status as StatusCode, Object.fromEntries(cached.headers.entries()));
@@ -63,8 +65,8 @@ export const nearbyCache: MiddlewareHandler<{ Bindings: Env }> = async (c, next)
     setSharedCacheHeaders(c.res, "");
 
     // Put a cached copy using synthetic GET key; do not await
-    console.log(`[CACHE] STORE - Key: ${cacheKey}, TTL: 10s Path: ${resourcePath}`);
-    c.executionCtx.waitUntil(putInEdgeCache(cacheKey, c.res, 10, resourcePath, "nearby-v1"));
+    console.log(`[CACHE] STORE - Key: ${cacheKey}, TTL: ${cacheTtlSeconds}s Path: ${resourcePath}`);
+    c.executionCtx.waitUntil(putInEdgeCache(cacheKey, c.res, cacheTtlSeconds, resourcePath, cachePartitionHint));
   } catch (_) {
     // Best-effort; do not fail the request on caching issues
   }

@@ -100,9 +100,17 @@ Relevant code:
 
 - `src/cache/nearby.ts` — helpers to normalize, build keys, and read/write the Workers cache
 - `src/middleware/nearbyCache.ts` — middleware that serves cache hits and stores successful responses via `ctx.waitUntil`
+- `src/config/index.ts` — global config for `cacheTtlSeconds` and `h3Resolution` with optional env overrides
 
 Notes:
 
 - Only successful `200` JSON responses are cached.
 - No `ETag`/`If-None-Match` handling is needed for POST here; freshness is controlled by a short edge TTL.
 - If you need purging, consider adding `Cache-Tag` headers keyed by the H3 id.
+
+### Config overrides
+
+You can override defaults via environment variables:
+
+- `CACHE_TTL_SECONDS` (default `10`)
+- `H3_RESOLUTION` (default `5`)

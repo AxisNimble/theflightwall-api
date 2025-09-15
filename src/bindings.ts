@@ -7,4 +7,7 @@ export interface Env extends Cloudflare.Env {
   FLIGHTWALL_API_KEYS: KVNamespace;
   FLIGHTWALL_RATE_LIMITER: RateLimiterBinding;
   KVNamespace: KVNamespace;
+  // Optional environment overrides for config
+  CACHE_TTL_SECONDS?: string;
+  H3_RESOLUTION?: string;
 }
