@@ -7,7 +7,7 @@ export type AppConfig = {
 };
 
 export const DEFAULT_CONFIG: AppConfig = {
-  cacheTtlSeconds: 10,
+  cacheTtlSeconds: 30,
   h3Resolution: 5,
   cachePartitionHint: "nearby-v1",
 };
