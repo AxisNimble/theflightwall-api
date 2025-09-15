@@ -1,9 +1,11 @@
 import { ApiException, fromHono } from "chanfana";
 import { Hono } from "hono";
 import { validateApiKeyAndRateLimit } from "./middleware/auth";
+import { nearbyCache } from "./middleware/nearbyCache";
 import { ContentfulStatusCode } from "hono/utils/http-status";
 import { FlightsPost } from "./endpoints/flights/flightsPost";
 import { TestFlightsPost } from "./endpoints/flights/testFlightsPost";
+import { CacheStats } from "./endpoints/monitoring/cacheStats";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -40,10 +42,15 @@ const openapi = fromHono(app, {
 
 // Global middleware - applies to all routes registered below
 app.use("*", validateApiKeyAndRateLimit);
+app.use("/flights", nearbyCache);
+app.use("/test/flights", nearbyCache);
 
 // Register flights endpoints
 openapi.post("/flights", FlightsPost);
 openapi.post("/test/flights", TestFlightsPost);
+
+// Register monitoring endpoints
+openapi.get("/monitoring/cache-stats", CacheStats);
 
 // Export the Hono app
 export default app;
