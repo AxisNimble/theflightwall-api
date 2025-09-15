@@ -86,3 +86,23 @@ Failure responses use a consistent envelope:
 ```
 
 This removes the need for per-endpoint auth/rate checks and ensures uniform behavior.
+
+## Edge caching for nearby flights
+
+The `/flights` and `/test/flights` POST endpoints are edge-cached for 10 seconds per H3 tile using the Workers Cache API.
+
+- **Normalization**: Requests with `radius_request` are normalized to an H3 cell (resolution 6) and a radius bucket.
+- **Stable cache key**: We build a stable key `near/h3/<res>/<cell>/r<bucket>` and pair it with the request pathname (so `/flights` and `/test/flights` don't collide).
+- **Workers Cache API**: We synthesize a GET request to look up and store responses in `caches.default`.
+- **TTL via headers**: Responses include `Cache-Control: public, s-maxage=10, max-age=0` so the edge caches for ~10s and browsers don't cache.
+
+Relevant code:
+
+- `src/cache/nearby.ts` — helpers to normalize, build keys, and read/write the Workers cache
+- `src/middleware/nearbyCache.ts` — middleware that serves cache hits and stores successful responses via `ctx.waitUntil`
+
+Notes:
+
+- Only successful `200` JSON responses are cached.
+- No `ETag`/`If-None-Match` handling is needed for POST here; freshness is controlled by a short edge TTL.
+- If you need purging, consider adding `Cache-Tag` headers keyed by the H3 id.
