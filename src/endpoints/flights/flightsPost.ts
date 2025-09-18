@@ -45,8 +45,7 @@ export class FlightsPost extends OpenAPIRoute {
       const client = new FlightWallDataAPI(c.env);
       const result = await client.searchFlights(body);
       return {
-        success: true,
-        result,
+        flights: result.flights,
       } as const;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
