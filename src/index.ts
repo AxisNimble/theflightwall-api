@@ -5,6 +5,8 @@ import { ContentfulStatusCode } from "hono/utils/http-status";
 import { FlightsPost } from "./endpoints/flights/flightsPost";
 import { TestFlightsPost } from "./endpoints/flights/testFlightsPost";
 import { CacheStats } from "./endpoints/monitoring/cacheStats";
+import { DeviceStatusPost } from "./endpoints/devices/statusPost";
+import { DeviceStatusGet } from "./endpoints/devices/statusGet";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -45,6 +47,10 @@ app.use("*", validateApiKeyAndRateLimit);
 // Register flights endpoints
 openapi.post("/flights", FlightsPost);
 openapi.post("/test/flights", TestFlightsPost);
+
+// Register device status endpoints
+openapi.post("/devices/status", DeviceStatusPost);
+openapi.get("/devices/status/:device_id", DeviceStatusGet);
 
 // Register monitoring endpoints
 openapi.get("/monitoring/cache-stats", CacheStats);

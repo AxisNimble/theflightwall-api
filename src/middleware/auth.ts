@@ -33,15 +33,28 @@ export const validateApiKeyAndRateLimit: MiddlewareHandler<{ Bindings: Env }> = 
     );
   }
 
-  const { success } = await c.env.FLIGHTWALL_RATE_LIMITER.limit({ key: apiKey });
-  if (!success) {
-    return c.json(
-      {
-        success: false,
-        errors: [{ code: 1201, message: "Rate limit exceeded" }],
-      },
-      429
-    );
+  if (c.req.method === "POST" && c.req.path === "/devices/status") {
+    const { success } = await c.env.FLIGHTWALL_DEVICE_STATUS_LIMITER.limit({ key: apiKey });
+    if (!success) {
+      return c.json(
+        {
+          success: false,
+          errors: [{ code: 1202, message: "Status updates limited to once every 30 minutes" }],
+        },
+        429
+      );
+    }
+  } else {
+    const { success } = await c.env.FLIGHTWALL_RATE_LIMITER.limit({ key: apiKey });
+    if (!success) {
+      return c.json(
+        {
+          success: false,
+          errors: [{ code: 1201, message: "Rate limit exceeded" }],
+        },
+        429
+      );
+    }
   }
 
   await next();

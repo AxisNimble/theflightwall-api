@@ -1,4 +1,4 @@
-{
+{ "account_id": "52467da66cfe2c518979c4b2927e4a0c",
   "compatibility_date": "2025-04-01",
   "main": "src/index.ts",
   "name": "theflightwall-api",
@@ -34,6 +34,15 @@
         "simple": {
           "limit": 1,
           "period": 10
+        }
+      },
+      {
+        "name": "FLIGHTWALL_DEVICE_STATUS_LIMITER",
+        "type": "ratelimit",
+        "namespace_id": "2002",
+        "simple": {
+          "limit": 1,
+          "period": 1800
         }
       }
     ]
