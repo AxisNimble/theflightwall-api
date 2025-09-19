@@ -27,7 +27,6 @@ export class DeviceStatusPost extends OpenAPIRoute {
       },
     },
   };
-
   public async handle(c: AppContext) {
     const apiKey = c.req.header("x-api-key") || "";
     const { body } = await this.getValidatedData<typeof this.schema>();
@@ -42,28 +41,13 @@ export class DeviceStatusPost extends OpenAPIRoute {
       user_agent: c.req.header("user-agent") || undefined,
     };
 
-    // Enforce 30-minute interval via D1 latest check
     try {
-      const latest = await c.env.DB.prepare(`SELECT timestamp FROM device_heartbeats WHERE device_id = ? ORDER BY timestamp DESC LIMIT 1`).bind(body.device_id).first<{ timestamp: string }>();
-
-      if (latest) {
-        const last = new Date(latest.timestamp).getTime();
-        const nowMs = Date.now();
-        if (nowMs - last < 30 * 60 * 1000) {
-          c.status(429);
-          return {
-            success: false,
-            errors: [{ code: 1202, message: "Status updates limited to once every 30 minutes" }],
-          } as const;
-        }
-      }
-
       // Append to D1 for history/analytics
       await c.env.DB.prepare(
-        `INSERT INTO device_heartbeats (device_id, app_state, ssid, uptime_seconds, firmware_version)
-         VALUES (?, ?, ?, ?, ?)`
+        `INSERT INTO device_heartbeats (device_id, app_state, ssid, uptime_seconds, firmware_version, last_seen, ip, user_agent)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       )
-        .bind(body.device_id, body.app_state ?? null, body.ssid ?? null, body.uptime_seconds, body.firmware_version)
+        .bind(body.device_id, body.app_state ?? null, body.ssid ?? null, body.uptime_seconds, body.firmware_version, record.last_seen, record.ip ?? null, record.user_agent ?? null)
         .run();
 
       // Upsert device row for convenience

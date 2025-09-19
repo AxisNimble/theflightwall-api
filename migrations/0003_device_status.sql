@@ -14,6 +14,9 @@ CREATE TABLE IF NOT EXISTS device_heartbeats (
   ssid TEXT,
   uptime_seconds INTEGER NOT NULL,
   firmware_version TEXT NOT NULL,
+  last_seen TIMESTAMP,
+  ip TEXT,
+  user_agent TEXT,
   timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
