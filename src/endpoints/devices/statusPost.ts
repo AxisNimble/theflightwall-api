@@ -44,11 +44,7 @@ export class DeviceStatusPost extends OpenAPIRoute {
 
     // Enforce 30-minute interval via D1 latest check
     try {
-      const latest = await c.env.DB.prepare(
-        `SELECT timestamp FROM device_heartbeats WHERE device_id = ? ORDER BY timestamp DESC LIMIT 1`
-      )
-        .bind(body.device_id)
-        .first<{ timestamp: string }>();
+      const latest = await c.env.DB.prepare(`SELECT timestamp FROM device_heartbeats WHERE device_id = ? ORDER BY timestamp DESC LIMIT 1`).bind(body.device_id).first<{ timestamp: string }>();
 
       if (latest) {
         const last = new Date(latest.timestamp).getTime();
@@ -67,13 +63,7 @@ export class DeviceStatusPost extends OpenAPIRoute {
         `INSERT INTO device_heartbeats (device_id, app_state, ssid, uptime_seconds, firmware_version)
          VALUES (?, ?, ?, ?, ?)`
       )
-        .bind(
-          body.device_id,
-          body.app_state ?? null,
-          body.ssid ?? null,
-          body.uptime_seconds,
-          body.firmware_version
-        )
+        .bind(body.device_id, body.app_state ?? null, body.ssid ?? null, body.uptime_seconds, body.firmware_version)
         .run();
 
       // Upsert device row for convenience
@@ -92,5 +82,3 @@ export class DeviceStatusPost extends OpenAPIRoute {
     return { success: true } as const;
   }
 }
-
-
