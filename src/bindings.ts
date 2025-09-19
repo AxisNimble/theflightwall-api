@@ -14,4 +14,6 @@ export interface Env extends Cloudflare.Env {
   // Secrets for upstream data engine
   FW_DATA_ENGINE_CLIENT_ID?: string;
   FW_DATA_ENGINE_CLIENT_SECRET?: string;
+  // Secret used to authorize provisioning new API keys
+  FW_API_KEY_PROVISION_KEY?: string;
 }

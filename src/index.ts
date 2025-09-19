@@ -6,7 +6,7 @@ import { FlightsPost } from "./endpoints/flights/flightsPost";
 import { TestFlightsPost } from "./endpoints/flights/testFlightsPost";
 import { CacheStats } from "./endpoints/monitoring/cacheStats";
 import { DeviceStatusPost } from "./endpoints/devices/statusPost";
-import { DeviceStatusGet } from "./endpoints/devices/statusGet";
+import { ProvisionKeyPost } from "./endpoints/keys/provisionPost";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -40,6 +40,9 @@ const openapi = fromHono(app, {
     },
   },
 });
+
+// Register provisioning endpoint BEFORE auth middleware so it can be called with its own secret
+openapi.post("/keys/provision", ProvisionKeyPost);
 
 // Global middleware - applies to all routes registered below
 app.use("*", validateApiKeyAndRateLimit);
