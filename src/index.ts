@@ -50,7 +50,6 @@ openapi.post("/test/flights", TestFlightsPost);
 
 // Register device status endpoints
 openapi.post("/devices/status", DeviceStatusPost);
-openapi.get("/devices/status/:device_id", DeviceStatusGet);
 
 // Register monitoring endpoints
 openapi.get("/monitoring/cache-stats", CacheStats);
