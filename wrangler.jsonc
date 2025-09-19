@@ -42,7 +42,8 @@
         "namespace_id": "2002",
         "simple": {
           "limit": 1,
-          "period": 1800
+          "period": 60
+          // "period": 1800
         }
       }
     ]
