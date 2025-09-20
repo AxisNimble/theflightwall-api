@@ -4,6 +4,8 @@ import { AppContext } from "../../types";
 import { FlightRequestSchema, FlightResponseSchema } from "../../schemas/flights";
 import { FlightWallDataAPI } from "../../data/FlightWallDataAPI";
 
+const MAX_FLIGHT_RESULTS = 8;
+
 export class FlightsPost extends OpenAPIRoute {
   public schema = {
     tags: ["Flights"],
@@ -44,8 +46,12 @@ export class FlightsPost extends OpenAPIRoute {
     try {
       const client = new FlightWallDataAPI(c.env);
       const result = await client.searchFlights(body);
+
+      // Apply arbitrary limit to prevent excessive response sizes
+      const limitedFlights = result.flights.slice(0, MAX_FLIGHT_RESULTS);
+
       return {
-        flights: result.flights,
+        flights: limitedFlights,
       } as const;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";

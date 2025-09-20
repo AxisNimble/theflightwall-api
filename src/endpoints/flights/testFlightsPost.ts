@@ -4,6 +4,15 @@ import { AppContext } from "../../types";
 import { FlightResponseSchema } from "../../schemas/flights";
 import { exampleFlights } from "../../data/exampleFlights";
 
+/**
+ * Utility function to introduce a random small delay.
+ * The delay will be between minMs and maxMs milliseconds.
+ */
+const randomDelay = async (minMs: number = 100, maxMs: number = 400): Promise<void> => {
+  const delay = Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+  return new Promise((resolve) => setTimeout(resolve, delay));
+};
+
 export class TestFlightsPost extends OpenAPIRoute {
   public schema = {
     tags: ["Flights"],
@@ -37,7 +46,9 @@ export class TestFlightsPost extends OpenAPIRoute {
       },
     },
   };
+
   public async handle(c: AppContext) {
+    await randomDelay();
     return {
       flights: exampleFlights,
     };
