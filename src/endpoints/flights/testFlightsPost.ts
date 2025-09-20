@@ -46,11 +46,12 @@ export class TestFlightsPost extends OpenAPIRoute {
       },
     },
   };
-
   public async handle(c: AppContext) {
     await randomDelay();
+    const shuffledFlights = [...exampleFlights].sort(() => Math.random() - 0.5);
+
     return {
-      flights: exampleFlights,
+      flights: shuffledFlights,
     };
   }
 }
