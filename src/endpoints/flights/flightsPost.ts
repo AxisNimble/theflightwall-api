@@ -4,7 +4,7 @@ import { AppContext } from "../../types";
 import { FlightRequestSchema, FlightResponseSchema } from "../../schemas/flights";
 import { FlightWallDataAPI } from "../../data/FlightWallDataAPI";
 
-const MAX_FLIGHT_RESULTS = 8;
+const MAX_FLIGHT_RESULTS = 3;
 
 export class FlightsPost extends OpenAPIRoute {
   public schema = {
