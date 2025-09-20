@@ -49,9 +49,10 @@ export class TestFlightsPost extends OpenAPIRoute {
   public async handle(c: AppContext) {
     await randomDelay();
     const shuffledFlights = [...exampleFlights].sort(() => Math.random() - 0.5);
+    const limitedFlights = shuffledFlights.slice(0, 10);
 
     return {
-      flights: shuffledFlights,
+      flights: limitedFlights,
     };
   }
 }
