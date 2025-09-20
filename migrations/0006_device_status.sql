@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS devices (
 CREATE TABLE IF NOT EXISTS device_heartbeats (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   device_id TEXT NOT NULL,
+  api_key TEXT NOT NULL,
   app_state TEXT,
   ssid TEXT,
   uptime_seconds INTEGER NOT NULL,
