@@ -29,6 +29,16 @@ export class DeviceStatusPost extends OpenAPIRoute {
   };
   public async handle(c: AppContext) {
     const apiKey = c.req.header("x-api-key") || "";
+
+    // Validate API key exists
+    if (!apiKey) {
+      c.status(401);
+      return {
+        success: false as const,
+        errors: [{ code: 1001, message: "Missing API key" }],
+      };
+    }
+
     const { body } = await this.getValidatedData<typeof this.schema>();
 
     const now = new Date().toISOString();
@@ -44,10 +54,10 @@ export class DeviceStatusPost extends OpenAPIRoute {
     try {
       // Append to D1 for history/analytics
       await c.env.DB.prepare(
-        `INSERT INTO device_heartbeats (device_id, app_state, ssid, uptime_seconds, firmware_version, last_seen, ip, user_agent)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO device_heartbeats (device_id, api_key, app_state, ssid, uptime_seconds, firmware_version, last_seen, ip, user_agent)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-        .bind(body.device_id, body.app_state ?? null, body.ssid ?? null, body.uptime_seconds, body.firmware_version, record.last_seen, record.ip ?? null, record.user_agent ?? null)
+        .bind(body.device_id, apiKey, body.app_state ?? null, body.ssid ?? null, body.uptime_seconds, body.firmware_version, record.last_seen, record.ip ?? null, record.user_agent ?? null)
         .run();
 
       // Upsert device row for convenience
@@ -59,8 +69,12 @@ export class DeviceStatusPost extends OpenAPIRoute {
         .bind(body.device_id, apiKey)
         .run();
     } catch (e) {
-      // Swallow D1 errors to not block ingestion; observability can capture logs
-      console.warn("Failed to write device heartbeat to D1", e);
+      console.error("Failed to write device heartbeat to D1", e);
+      c.status(500);
+      return {
+        success: false as const,
+        errors: [{ code: 1003, message: "Database error" }],
+      };
     }
 
     return { success: true } as const;
