@@ -47,6 +47,18 @@ export const FlightSchema = z.object({
   meta_last_contact: z.number().int().optional(), // unix timestamp
   meta_timestamp: z.string().optional(),
   meta_source: z.string().optional(),
+
+  // Optional deltas between this and previous sample (computed upstream)
+  deltas: z
+    .object({
+      position_altitude_baro: z.number().optional(),
+      position_altitude_geo: z.number().optional(),
+      position_velocity: z.number().optional(),
+      position_true_track: z.number().optional(),
+      position_vertical_rate: z.number().optional(),
+      dt_seconds: z.number().int().optional(),
+    })
+    .optional(),
 });
 
 export type Flight = z.infer<typeof FlightSchema>;
