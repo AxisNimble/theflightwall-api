@@ -41,6 +41,7 @@ export const FlightSchema = z.object({
 
   // Aircraft type
   aircraft_type: z.string().optional(),
+  aircraft_type_readable: z.string().optional(),
 
   // Metadata
   meta_origin_country: z.string().optional(),
