@@ -7,6 +7,8 @@ import { TestFlightsPost } from "./endpoints/flights/testFlightsPost";
 import { CacheStats } from "./endpoints/monitoring/cacheStats";
 import { DeviceStatusPost } from "./endpoints/devices/statusPost";
 import { ProvisionKeyPost } from "./endpoints/keys/provisionPost";
+import { ConfigurationGet } from "./endpoints/configuration/configurationGet";
+import { ConfigurationPost } from "./endpoints/configuration/configurationPost";
 
 // Start a Hono app
 const app = new Hono<{ Bindings: Env }>();
@@ -53,6 +55,10 @@ openapi.post("/test/flights", TestFlightsPost);
 
 // Register device status endpoints
 openapi.post("/devices/status", DeviceStatusPost);
+
+// Register configuration endpoints
+openapi.get("/configuration", ConfigurationGet);
+openapi.post("/configuration", ConfigurationPost);
 
 // Register monitoring endpoints
 openapi.get("/monitoring/cache-stats", CacheStats);

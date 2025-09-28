@@ -23,6 +23,10 @@
     {
       "binding": "FLIGHTWALL_API_KEYS",
       "id": "b526446b9087443ba5901327bf286589"
+    },
+    {
+      "binding": "FLIGHTWALL_CONFIGURATIONS",
+      "id": "bc73101a1d754fe1a101a6bfa51e2345"
     }
   ],
   "unsafe": {

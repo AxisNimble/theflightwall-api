@@ -5,6 +5,7 @@ export interface RateLimiterBinding {
 export interface Env extends Cloudflare.Env {
   DB: D1Database;
   FLIGHTWALL_API_KEYS: KVNamespace;
+  FLIGHTWALL_CONFIGURATIONS: KVNamespace;
   FLIGHTWALL_RATE_LIMITER: RateLimiterBinding;
   FLIGHTWALL_DEVICE_STATUS_LIMITER: RateLimiterBinding;
   KVNamespace: KVNamespace;
