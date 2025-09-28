@@ -49,6 +49,15 @@
           "period": 60
           // "period": 1800
         }
+      },
+      {
+        "name": "FLIGHTWALL_CONFIGURATION_LIMITER",
+        "type": "ratelimit",
+        "namespace_id": "2003",
+        "simple": {
+          "limit": 1,
+          "period": 5
+        }
       }
     ]
   }

@@ -33,7 +33,18 @@ export const validateApiKeyAndRateLimit: MiddlewareHandler<{ Bindings: Env }> = 
     );
   }
 
-  if (c.req.method === "POST" && c.req.path === "/devices/status") {
+  if (c.req.path === "/configuration") {
+    const { success } = await c.env.FLIGHTWALL_CONFIGURATION_LIMITER.limit({ key: apiKey });
+    if (!success) {
+      return c.json(
+        {
+          success: false,
+          errors: [{ code: 1203, message: "Configuration requests limited to once every 5 seconds" }],
+        },
+        429
+      );
+    }
+  } else if (c.req.method === "POST" && c.req.path === "/devices/status") {
     const { success } = await c.env.FLIGHTWALL_DEVICE_STATUS_LIMITER.limit({ key: apiKey });
     if (!success) {
       return c.json(

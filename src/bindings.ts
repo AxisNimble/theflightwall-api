@@ -8,6 +8,7 @@ export interface Env extends Cloudflare.Env {
   FLIGHTWALL_CONFIGURATIONS: KVNamespace;
   FLIGHTWALL_RATE_LIMITER: RateLimiterBinding;
   FLIGHTWALL_DEVICE_STATUS_LIMITER: RateLimiterBinding;
+  FLIGHTWALL_CONFIGURATION_LIMITER: RateLimiterBinding;
   KVNamespace: KVNamespace;
   // Optional environment overrides for config
   CACHE_TTL_SECONDS?: string;
