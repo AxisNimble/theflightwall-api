@@ -45,9 +45,9 @@ export const DisplayConfigSchema = z.object({
   info_layout_preset: z.union([z.literal("default"), z.literal("technical")]),
   display_layout_preset: z.union([z.literal("default"), z.literal("no_logo")]),
   anchor_airports: z.array(z.string()).max(6).optional().nullable(),
-  brightness_percent: z.number().int().min(1).max(100).optional(),
+  brightness_percent: z.number().min(1).max(100).optional(),
   border_enable: z.boolean().optional(),
-  border_brightness_percent: z.number().int().min(1).max(100).optional(),
+  border_brightness_percent: z.number().min(1).max(100).optional(),
 });
 export type DisplayConfig = z.infer<typeof DisplayConfigSchema>;
 
