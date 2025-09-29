@@ -48,11 +48,8 @@ export class ConfigurationGet extends OpenAPIRoute {
 
     const raw = await c.env.FLIGHTWALL_CONFIGURATIONS.get(apiKey);
     if (!raw) {
-      c.status(404);
-      return {
-        success: false as const,
-        errors: [{ code: 1301, message: "Configuration not found" }],
-      };
+      // No configuration for this key: return empty object
+      return {} as const;
     }
 
     let parsed: unknown;
@@ -75,15 +72,6 @@ export class ConfigurationGet extends OpenAPIRoute {
       };
     }
 
-    const savedMs = validation.data.meta?.savedAtEpochMs ?? Date.now();
-    const last_saved = Math.floor(savedMs / 1000);
-
-    return {
-      last_saved,
-      data: {
-        request_config: validation.data.request_config,
-        display_config: validation.data.display_config,
-      },
-    } as const;
+    return validation.data;
   }
 }

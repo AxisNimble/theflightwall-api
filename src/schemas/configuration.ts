@@ -85,15 +85,7 @@ export const DEFAULT_PERSISTED_CONFIGURATION: PersistedConfiguration = {
   meta: { version: 1 },
 };
 
-export const ConfigurationGetResponseSchema = z.object({
-  last_saved: z.number().optional(),
-  data: z
-    .object({
-      request_config: RequestConfigSchema,
-      display_config: DisplayConfigSchema.optional().nullable(),
-    })
-    .optional(),
-});
+export const ConfigurationGetResponseSchema = z.union([z.object({}).strict(), PersistedConfigurationSchema]);
 export type ConfigurationGetResponse = z.infer<typeof ConfigurationGetResponseSchema>;
 
 export const ConfigurationPostBodySchema = z.object({

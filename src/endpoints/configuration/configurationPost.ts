@@ -14,7 +14,7 @@ export class ConfigurationPost extends OpenAPIRoute {
     responses: {
       "200": {
         description: "Configuration saved",
-        ...contentJson(z.object({ success: z.literal(true) })),
+        ...contentJson(PersistedConfigurationSchema),
       },
       "401": {
         description: "Unauthorized",
@@ -60,6 +60,6 @@ export class ConfigurationPost extends OpenAPIRoute {
 
     await c.env.FLIGHTWALL_CONFIGURATIONS.put(apiKey, JSON.stringify(validation.data));
 
-    return { success: true } as const;
+    return validation.data as const;
   }
 }
