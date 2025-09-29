@@ -37,7 +37,7 @@
         "namespace_id": "2001",
         "simple": {
           "limit": 1,
-          "period": 10
+          "period": 5
         }
       },
       {
