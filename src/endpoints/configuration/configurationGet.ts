@@ -72,6 +72,10 @@ export class ConfigurationGet extends OpenAPIRoute {
       };
     }
 
-    return validation.data;
+    // Return only request_config and optional display_config to align to GET response shape
+    const { request_config, display_config } = validation.data;
+    return display_config === undefined
+      ? { request_config }
+      : { request_config, display_config };
   }
 }

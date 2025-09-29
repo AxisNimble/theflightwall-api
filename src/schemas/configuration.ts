@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// Configuration data model based on configurator.md
+// Configuration data model aligned to device firmware schema
 
 export const FlightRequestTypeSchema = z.union([z.literal("radius"), z.literal("geo")]);
 export type FlightRequestType = z.infer<typeof FlightRequestTypeSchema>;
@@ -13,28 +13,33 @@ export const DataFiltersSchema = z.object({
 });
 export type DataFilters = z.infer<typeof DataFiltersSchema>;
 
-export const BaseRequestConfigSchema = z.object({
-  type: FlightRequestTypeSchema,
-  coordinates: z.array(LonLatTupleSchema),
-  min_altitude: z.number().optional().nullable(),
-  max_altitude: z.number().optional().nullable(),
-  data_filters: DataFiltersSchema.optional().nullable(),
-});
-
-export const RadiusRequestConfigSchema = BaseRequestConfigSchema.extend({
+// Requests
+export const RadiusRequestSchema = z.object({
   type: z.literal("radius"),
+  latitude: z.number(),
+  longitude: z.number(),
   radius_km: z.number().gt(0),
+  min_altitude: z.number().nullable().optional(),
+  max_altitude: z.number().nullable().optional(),
 });
+export type RadiusRequest = z.infer<typeof RadiusRequestSchema>;
 
-export const GeoRequestConfigSchema = BaseRequestConfigSchema.extend({
+export const GeoRequestSchema = z.object({
   type: z.literal("geo"),
+  coordinates: z.array(LonLatTupleSchema),
+  min_altitude: z.number().nullable().optional(),
+  max_altitude: z.number().nullable().optional(),
 });
+export type GeoRequest = z.infer<typeof GeoRequestSchema>;
 
-export const RequestConfigSchema = z.union([RadiusRequestConfigSchema, GeoRequestConfigSchema]);
+export const RequestConfigSchema = z.object({
+  radius_request: RadiusRequestSchema.nullable().optional(),
+  geo_request: GeoRequestSchema.nullable().optional(),
+  data_filters: DataFiltersSchema.nullable().optional(),
+});
 export type RequestConfig = z.infer<typeof RequestConfigSchema>;
-export type RadiusRequestConfig = z.infer<typeof RadiusRequestConfigSchema>;
-export type GeoRequestConfig = z.infer<typeof GeoRequestConfigSchema>;
 
+// Display
 export const DisplayConfigSchema = z.object({
   model: z.union([z.literal("mini-v1"), z.literal("widescreen-v1")]),
   info_layout_preset: z.union([z.literal("default"), z.literal("technical")]),
@@ -46,6 +51,7 @@ export const DisplayConfigSchema = z.object({
 });
 export type DisplayConfig = z.infer<typeof DisplayConfigSchema>;
 
+// Persisted configuration
 export const PersistedConfigurationMetaSchema = z.object({
   savedAtEpochMs: z.number().optional(),
   version: z.number().optional(),
@@ -60,13 +66,13 @@ export const PersistedConfigurationSchema = z.object({
 export type PersistedConfiguration = z.infer<typeof PersistedConfigurationSchema>;
 
 // Defaults
-export const DEFAULT_REQUEST_CONFIG: RadiusRequestConfig = {
+export const DEFAULT_RADIUS_REQUEST: RadiusRequest = {
   type: "radius",
-  coordinates: [[-118.2437, 34.0522]],
+  latitude: 34.0522,
+  longitude: -118.2437,
   radius_km: 25,
   min_altitude: null,
   max_altitude: null,
-  data_filters: null,
 };
 
 export const DEFAULT_DISPLAY_CONFIG: DisplayConfig = {
@@ -80,12 +86,19 @@ export const DEFAULT_DISPLAY_CONFIG: DisplayConfig = {
 };
 
 export const DEFAULT_PERSISTED_CONFIGURATION: PersistedConfiguration = {
-  request_config: DEFAULT_REQUEST_CONFIG,
+  request_config: { radius_request: DEFAULT_RADIUS_REQUEST, geo_request: null, data_filters: null },
   display_config: DEFAULT_DISPLAY_CONFIG,
   meta: { version: 1 },
 };
 
-export const ConfigurationGetResponseSchema = z.union([z.object({}).strict(), PersistedConfigurationSchema]);
+// Responses/Bodies
+export const ConfigurationGetResponseSchema = z.union([
+  z.object({}).strict(),
+  z.object({
+    request_config: RequestConfigSchema,
+    display_config: DisplayConfigSchema.optional().nullable(),
+  }),
+]);
 export type ConfigurationGetResponse = z.infer<typeof ConfigurationGetResponseSchema>;
 
 export const ConfigurationPostBodySchema = z.object({
