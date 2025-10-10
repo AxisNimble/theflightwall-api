@@ -46,6 +46,15 @@ const openapi = fromHono(app, {
 // Register provisioning endpoint BEFORE auth middleware so it can be called with its own secret
 openapi.post("/keys/provision", ProvisionKeyPost);
 
+// Simple status endpoint for health checks and testing
+app.get("/status", (c) => {
+  return c.json({
+    success: true,
+    message: "TheFlightWall API is running",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Global middleware - applies to all routes registered below
 app.use("*", validateApiKeyAndRateLimit);
 
